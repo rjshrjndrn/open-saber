@@ -15,26 +15,33 @@ node('build-slave') {
 
             env.NODE_ENV = "build"
             print "Environment will be : ${env.NODE_ENV}"
-            sh('git pull origin master')
-            sh('pwd')
-            sh ('sh configure-dependencies.sh')
-	        sh('cd java && mvn clean install')
-            sh('pwd')
-	        sh('cd java/registry && mvn clean install')
-            sh 'chmod 755 ./target/metadata.sh'
-            sh('./build.sh')
+            sh '''
+            set -x
+            git pull origin master
+            pwd
+            currdir=$(pwd)
+            sh configure-dependencies.sh
+	        cd java && mvn clean install
+            pwd
+	        cd registry && mvn clean install
+            cd $currdir
+            chmod 755 ./target/metadata.sh
+            ./build.sh
+            '''
 
         }
 
         stage('Publish') {
 
             echo 'Push to Repo'
-            sh 'ls -al ~/'
-            sh 'ARTIFACT_LABEL=bronze ./dockerPushToRepo.sh'
-            sh './target/metadata.sh > metadata.json'
-            sh 'cat metadata.json'
+            sh '''
+            set -x
+            ls -al ~/
+             # ARTIFACT_LABEL=bronze ./dockerPushToRepo.sh
+            ./target/metadata.sh > metadata.json
+            cat metadata.json
             archive includes: "metadata.json"
-
+            '''
         }
     } catch (err) {
 
